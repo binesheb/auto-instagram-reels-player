@@ -1,89 +1,86 @@
 # Auto Instagram Reels Player (Android TV Box)
 
-A fully automated system that downloads Instagram Reels from a chosen account,
-builds a shuffled playlist, and plays it 24×7 on an Android TV box.
+A Termux-based player that downloads video posts identified as Reels from a chosen public Instagram account, builds a shuffled playlist, and opens that playlist in VLC on an Android TV box.
 
-The ONLY user input required is the Instagram username (entered once).
-Everything else runs automatically forever.
+The Instagram username is stored locally after the first prompt. The launcher then checks for new content on a schedule.
 
----
-
-## Features
-
-- Auto-downloads all Reels from a chosen Instagram account
-- Detects and downloads new Reels every 10 minutes
-- Builds a shuffled playlist (`playlist.m3u`)
-- Auto-launches VLC for playback
-- Auto-starts on device boot (Termux:Boot)
-- Self-updates from GitHub (versioning + rollback)
-- Verifies file integrity using SHA256 checksums
-- Displays changelog on update
-- Modular updater (multiple tracked files)
+> **Status:** early 1.x foundation. Instagram access can be rate-limited or changed by upstream service behavior. Test with an account you are authorized to use and follow the applicable platform terms.
 
 ---
+
+## Architecture
+
+- `auto_reels_launcher.py` — download loop, playlist generation, VLC launch
+- `updater.py` — version check, backup, integrity verification when checksums are published, rollback
+- `version.txt` — current Semantic Versioning value
+- `checksums.txt` — SHA-256 manifest for updater-managed files
+- `termux-boot/auto_reels.sh` — boot-time launcher
+- `UPDATE.md` — automatic, manual, and rollback procedures
 
 ## Installation
 
-### 1. Install apps on Android TV box
-- Termux (from F-Droid)
-- Termux:Boot (from F-Droid)
+### 1. Install Android apps
+
+- Termux from F-Droid
+- Termux:Boot from F-Droid
 - VLC for Android TV
 
-### 2. Install dependencies
-pkg update 
-pkg install python 
+### 2. Install the project and dependencies
+
+```sh
+git clone https://github.com/binesheb/auto-instagram-reels-player.git
+cd auto-instagram-reels-player
+pkg update
+pkg install python git
 pip install -r requirements.txt
+```
 
+### 3. Enable boot startup
 
-### 3. Copy project files into Termux
-/data/data/com.termux/files/home/auto-instagram-reels-player/
-
-
-### 4. Make scripts executable
-chmod +x auto_reels_launcher.py
-chmod +x updater.py
+```sh
 chmod +x termux-boot/auto_reels.sh
-
-
-### 5. Enable auto-start on boot
-
 mkdir -p ~/.termux/boot
 cp termux-boot/auto_reels.sh ~/.termux/boot/
+```
 
+### 4. First run
 
-### 6. First run
+```sh
 python auto_reels_launcher.py
+```
 
+Enter the target Instagram username when prompted.
 
-You will be asked:
+## Updates
 
-Enter Instagram username:
+### Automatic update
 
-Enter your target account (e.g., `jayalakshmionline`).
+The launcher checks `version.txt` before entering its main loop. If a newer version is available, the updater backs up the managed files, downloads the published files, verifies SHA-256 hashes **when the manifest contains hashes for those files**, records the new version, and restarts. Failed updates restore the previous tracked files.
 
-Playback begins automatically.
+The current repository now includes `checksums.txt`; release changes should publish real SHA-256 values for every file in `TRACKED_FILES`. An empty or comment-only manifest means no file hashes are enforced, so maintainers should not treat that as a verified release.
 
----
+### Manual update
 
-## How updates work
+```sh
+cd ~/auto-instagram-reels-player
+git status
+git pull --ff-only origin main
+pip install -r requirements.txt
+python auto_reels_launcher.py
+```
 
-- Script checks GitHub every 10 minutes
-- If a new version is available:
-  - Downloads updated files
-  - Verifies SHA256 checksums
-  - Shows changelog
-  - Restarts automatically
-- If update fails:
-  - Automatically rolls back to previous version
+See `UPDATE.md` for rollback and non-Git installation guidance.
 
----
+## Release policy
+
+This project uses Semantic Versioning:
+
+- **MAJOR** — incompatible installation or configuration changes
+- **MINOR** — backward-compatible functionality
+- **PATCH** — backward-compatible bug, reliability, or documentation fixes
+
+Meaningful releases should update `version.txt`, add release notes to `CHANGELOG.md`, and regenerate `checksums.txt` for all updater-managed files.
 
 ## License
 
 MIT License
-
-
-
-
-
-
