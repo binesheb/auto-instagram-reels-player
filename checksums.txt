@@ -1,0 +1,4 @@
+# SHA-256 checksums for files managed by updater.py.
+# Regenerate whenever a tracked file changes:
+# sha256sum auto_reels_launcher.py updater.py > checksums.txt
+# Commit this file with the corresponding version.txt change.
