@@ -13,15 +13,17 @@ From the Termux project directory:
 ```sh
 git status
 git pull --ff-only origin main
-pip install -r requirements.txt
+bash scripts/bootstrap.sh
 python auto_reels_launcher.py
 ```
+
+The bootstrap helper installs the declared Python/Git prerequisites for Termux, synchronizes the Python dependencies from `requirements.txt`, and compiles the tracked Python files before launch.
 
 `git pull --ff-only` intentionally refuses to overwrite divergent local history. Resolve local changes first instead of forcing an update.
 
 ## If Git was not used for installation
 
-Back up the current project directory first, then copy a fresh release or repository checkout into a new directory and install dependencies again. Keep the previous directory until the new installation has started successfully.
+Back up the current project directory first, then copy a fresh release or repository checkout into a new directory and run `bash scripts/bootstrap.sh`. Keep the previous directory until the new installation has started successfully.
 
 ## Rollback
 
