@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Automatic updates now refuse to install when SHA-256 checksums are missing for any updater-managed file.
 - Documented the checksum manifest requirement for updater-managed releases.
 - Clarified architecture, update behavior, rollback, and Semantic Versioning policy.
 
