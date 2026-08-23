@@ -45,17 +45,17 @@ def get_remote_checksums():
     try:
         data = _http_get("checksums.txt")
     except Exception:
-        return {}
+        return None
     checksums = {}
     for line in data.splitlines():
         line = line.strip()
-        if not line:
+        if not line or line.startswith("#"):
             continue
         parts = line.split()
         if len(parts) != 2:
             continue
         checksum, fname = parts
-        checksums[fname] = checksum
+        checksums[fname] = checksum.lower()
     return checksums
 
 def sha256_file(path: Path):
@@ -115,8 +115,16 @@ def update_script_if_needed():
         print(f"Up to date (local {local}, remote {remote}).")
         return
 
-    print(f"Updating from {local} → {remote}")
     checksums = get_remote_checksums()
+    missing_checksums = [fname for fname in TRACKED_FILES if not checksums or fname not in checksums]
+    if missing_checksums:
+        print(
+            "Update refused because the remote release does not provide SHA-256 "
+            f"checksums for: {', '.join(missing_checksums)}."
+        )
+        return
+
+    print(f"Updating from {local} → {remote}")
     backup_dir = backup_current_files(local)
 
     try:
@@ -128,11 +136,10 @@ def update_script_if_needed():
             target = LOCAL_ROOT / fname
             target.write_text(content)
 
-            if fname in checksums:
-                actual = sha256_file(target)
-                expected = checksums[fname]
-                if actual != expected:
-                    raise RuntimeError(f"Checksum mismatch for {fname}")
+            actual = sha256_file(target)
+            expected = checksums[fname]
+            if actual != expected:
+                raise RuntimeError(f"Checksum mismatch for {fname}")
 
         LOCAL_VERSION_FILE.parent.mkdir(parents=True, exist_ok=True)
         LOCAL_VERSION_FILE.write_text(remote)
