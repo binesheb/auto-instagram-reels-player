@@ -58,13 +58,6 @@ def get_remote_checksums():
         checksums[fname] = checksum.lower()
     return checksums
 
-def sha256_file(path: Path):
-    h = hashlib.sha256()
-    with path.open("rb") as f:
-        for chunk in iter(lambda: f.read(8192), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
 def backup_current_files(local_version):
     backup_dir = BACKUP_ROOT / local_version
     backup_dir.mkdir(parents=True, exist_ok=True)
@@ -129,17 +122,22 @@ def update_script_if_needed():
 
     try:
         LOCAL_ROOT.mkdir(parents=True, exist_ok=True)
+        downloaded = {}
 
         for fname in TRACKED_FILES:
             print(f"Downloading {fname}…")
             content = _http_get(fname)
-            target = LOCAL_ROOT / fname
-            target.write_text(content)
-
-            actual = sha256_file(target)
+            actual = hashlib.sha256(content.encode("utf-8")).hexdigest()
             expected = checksums[fname]
             if actual != expected:
                 raise RuntimeError(f"Checksum mismatch for {fname}")
+            downloaded[fname] = content
+
+        for fname, content in downloaded.items():
+            target = LOCAL_ROOT / fname
+            temporary = target.with_suffix(target.suffix + ".tmp")
+            temporary.write_text(content)
+            os.replace(temporary, target)
 
         LOCAL_VERSION_FILE.parent.mkdir(parents=True, exist_ok=True)
         LOCAL_VERSION_FILE.write_text(remote)
