@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import logging
 import random
+import re
 import time
 import subprocess
 from pathlib import Path
@@ -9,12 +10,19 @@ import instaloader
 from updater import update_script_if_needed
 
 CONFIG_FILE = Path.home() / "insta_reels" / "config.txt"
+USERNAME_PATTERN = re.compile(r"^[A-Za-z0-9._]{1,30}$")
 
 def get_username():
     if CONFIG_FILE.exists():
-        return CONFIG_FILE.read_text().strip()
+        username = CONFIG_FILE.read_text().strip()
+        if USERNAME_PATTERN.fullmatch(username):
+            return username
+        print("Saved Instagram username is invalid; please enter it again.")
+
     print("\nEnter Instagram username (only once): ")
     username = input("> ").strip()
+    if not USERNAME_PATTERN.fullmatch(username):
+        raise ValueError("Invalid Instagram username. Use 1-30 letters, numbers, periods, or underscores.")
     CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
     CONFIG_FILE.write_text(username)
     print(f"\nSaved username: {username}")
