@@ -2,5 +2,5 @@
 # Regenerate whenever a tracked file changes:
 # sha256sum auto_reels_launcher.py updater.py > checksums.txt
 # Commit this file with the corresponding version.txt change.
-e9fe04fbc72fcc75c61ca9cf1a14bfe9f6fbeee4a8978bbba104926aed7e44c6  auto_reels_launcher.py
+f50f9b2a92daa84658d5ff09a857142995e1d51adcace049a4d32b86388e649c  auto_reels_launcher.py
 2d9e705901a3b6232a2dc712857878a9b404d6ae063cfe5efa5890ef0c8f8f76  updater.py
