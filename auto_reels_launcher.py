@@ -87,10 +87,15 @@ def build_shuffle_playlist(download_root):
 def launch_player(download_root):
     playlist = download_root / "playlist.m3u"
     logging.info("Launching VLC for playback…")
-    subprocess.Popen([
-        "am", "start", "-a", "android.intent.action.VIEW",
-        "-d", f"file://{playlist}", "-t", "audio/x-mpegurl"
-    ])
+    try:
+        subprocess.Popen([
+            "am", "start", "-a", "android.intent.action.VIEW",
+            "-d", f"file://{playlist}", "-t", "audio/x-mpegurl"
+        ])
+        return True
+    except OSError as e:
+        logging.error(f"Could not launch VLC through Android Activity Manager: {e}")
+        return False
 
 def main_loop():
     update_script_if_needed()
