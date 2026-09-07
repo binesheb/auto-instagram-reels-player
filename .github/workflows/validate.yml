@@ -1,0 +1,31 @@
+name: Validate
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Validate Python syntax
+        run: python -m py_compile auto_reels_launcher.py updater.py
+
+      - name: Verify updater checksums
+        run: |
+          set -eu
+          while read -r expected file; do
+            case "$expected" in
+              ""|\#*) continue ;;
+            esac
+            test -f "$file"
+            actual="$(sha256sum "$file" | awk '{print $1}')"
+            test "$actual" = "$expected"
+          done < checksums.txt
