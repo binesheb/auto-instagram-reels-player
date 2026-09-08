@@ -33,7 +33,10 @@ def get_remote_version():
         return None
 
 def parse_version(v):
-    return tuple(int(x) for x in v.split("."))
+    parts = v.split(".")
+    if len(parts) != 3 or any(not part.isdigit() for part in parts):
+        raise ValueError(f"Invalid semantic version: {v}")
+    return tuple(int(part) for part in parts)
 
 def is_newer(remote, local):
     try:
