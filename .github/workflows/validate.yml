@@ -21,6 +21,42 @@ jobs:
       - name: Verify updater checksums
         run: |
           set -eu
+          python - <<'PY'
+          import ast
+          from pathlib import Path
+
+          tree = ast.parse(Path("updater.py").read_text())
+          tracked = None
+          for node in tree.body:
+              if isinstance(node, ast.Assign) and any(
+                  isinstance(target, ast.Name) and target.id == "TRACKED_FILES"
+                  for target in node.targets
+              ):
+                  tracked = ast.literal_eval(node.value)
+                  break
+          if not isinstance(tracked, list) or not all(isinstance(item, str) for item in tracked):
+              raise SystemExit("TRACKED_FILES must be a list of strings")
+
+          manifest = {}
+          for raw in Path("checksums.txt").read_text().splitlines():
+              line = raw.strip()
+              if not line or line.startswith("#"):
+                  continue
+              parts = line.split()
+              if len(parts) != 2:
+                  raise SystemExit(f"Malformed checksum entry: {raw}")
+              digest, filename = parts
+              if filename in manifest:
+                  raise SystemExit(f"Duplicate checksum entry: {filename}")
+              manifest[filename] = digest
+
+          if set(manifest) != set(tracked):
+              raise SystemExit(
+                  f"Checksum manifest does not exactly match TRACKED_FILES: "
+                  f"tracked={tracked!r}, manifest={sorted(manifest)!r}"
+              )
+          PY
+
           while read -r expected file; do
             case "$expected" in
               ""|\#*) continue ;;
