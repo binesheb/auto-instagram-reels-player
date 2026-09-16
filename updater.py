@@ -71,12 +71,23 @@ def backup_current_files(local_version):
             dst.write_bytes(src.read_bytes())
     return backup_dir
 
+def backup_current_version(local_version):
+    backup_dir = BACKUP_ROOT / local_version
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    if LOCAL_VERSION_FILE.exists():
+        (backup_dir / "version.txt").write_bytes(LOCAL_VERSION_FILE.read_bytes())
+    return backup_dir
+
 def restore_backup(backup_dir):
     for fname in TRACKED_FILES:
         src = backup_dir / fname
         if src.exists():
             dst = LOCAL_ROOT / fname
             dst.write_bytes(src.read_bytes())
+    version_backup = backup_dir / "version.txt"
+    if version_backup.exists():
+        LOCAL_VERSION_FILE.parent.mkdir(parents=True, exist_ok=True)
+        LOCAL_VERSION_FILE.write_bytes(version_backup.read_bytes())
 
 def show_changelog(remote_version):
     try:
@@ -122,6 +133,7 @@ def update_script_if_needed():
 
     print(f"Updating from {local} → {remote}")
     backup_dir = backup_current_files(local)
+    backup_current_version(local)
 
     try:
         LOCAL_ROOT.mkdir(parents=True, exist_ok=True)
@@ -143,12 +155,14 @@ def update_script_if_needed():
             os.replace(temporary, target)
 
         LOCAL_VERSION_FILE.parent.mkdir(parents=True, exist_ok=True)
-        LOCAL_VERSION_FILE.write_text(remote)
+        temporary_version = LOCAL_VERSION_FILE.with_suffix(LOCAL_VERSION_FILE.suffix + ".tmp")
+        temporary_version.write_text(remote)
+        os.replace(temporary_version, LOCAL_VERSION_FILE)
 
-        show_changelog(remote)
+        show_changelog(remote_version=remote)
 
         print("Update complete. Restarting…")
-        os.execv(sys.executable, ["python", str(LOCAL_ROOT / "auto_reels_launcher.py")])
+        os.execv(sys.executable, [sys.executable, str(LOCAL_ROOT / "auto_reels_launcher.py")])
 
     except Exception as e:
         print(f"Update failed: {e}. Restoring backup.")

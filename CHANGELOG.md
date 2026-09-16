@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.2
+
+- Restore the persisted local version when an automatic update fails after changing the version file.
+- Write the updated version atomically so interrupted updates do not leave a partial version file.
+
 ## Unreleased
 
 - Keep the player loop running when Android Activity Manager cannot launch VLC.
