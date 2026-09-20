@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.3
+
+- Bind the SHA-256 checksum manifest to the reported release version so automatic updates refuse mixed-version manifests.
+
 ## 0.1.2
 
 - Restore the persisted local version when an automatic update fails after changing the version file.
