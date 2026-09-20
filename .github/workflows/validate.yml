@@ -27,5 +27,6 @@ jobs:
             esac
             test -f "$file"
             actual="$(sha256sum "$file" | awk '{print $1}')"
+            echo "$file: expected=$expected actual=$actual"
             test "$actual" = "$expected"
           done < checksums.txt
