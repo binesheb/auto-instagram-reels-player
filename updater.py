@@ -48,18 +48,24 @@ def get_remote_checksums():
     try:
         data = _http_get("checksums.txt")
     except Exception:
-        return None
+        return None, None
     checksums = {}
+    manifest_version = None
     for line in data.splitlines():
         line = line.strip()
-        if not line or line.startswith("#"):
+        if not line:
+            continue
+        if line.startswith("#"):
+            marker = "# version:"
+            if line.lower().startswith(marker):
+                manifest_version = line.split(":", 1)[1].strip()
             continue
         parts = line.split()
         if len(parts) != 2:
             continue
         checksum, fname = parts
         checksums[fname] = checksum.lower()
-    return checksums
+    return manifest_version, checksums
 
 def backup_current_files(local_version):
     backup_dir = BACKUP_ROOT / local_version
@@ -122,7 +128,14 @@ def update_script_if_needed():
         print(f"Up to date (local {local}, remote {remote}).")
         return
 
-    checksums = get_remote_checksums()
+    manifest_version, checksums = get_remote_checksums()
+    if manifest_version != remote:
+        print(
+            "Update refused because checksums.txt is not bound to the "
+            f"reported version {remote}."
+        )
+        return
+
     missing_checksums = [fname for fname in TRACKED_FILES if not checksums or fname not in checksums]
     if missing_checksums:
         print(
