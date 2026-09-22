@@ -87,13 +87,19 @@ def backup_current_version(local_version):
 def restore_backup(backup_dir):
     for fname in TRACKED_FILES:
         src = backup_dir / fname
+        dst = LOCAL_ROOT / fname
         if src.exists():
-            dst = LOCAL_ROOT / fname
+            dst.parent.mkdir(parents=True, exist_ok=True)
             dst.write_bytes(src.read_bytes())
+        elif dst.exists():
+            dst.unlink()
+
     version_backup = backup_dir / "version.txt"
     if version_backup.exists():
         LOCAL_VERSION_FILE.parent.mkdir(parents=True, exist_ok=True)
         LOCAL_VERSION_FILE.write_bytes(version_backup.read_bytes())
+    elif LOCAL_VERSION_FILE.exists():
+        LOCAL_VERSION_FILE.unlink()
 
 def show_changelog(remote_version):
     try:
