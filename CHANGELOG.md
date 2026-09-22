@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.4
+
+- Fix automatic-update rollback so files and the persisted version that did not exist before an update are removed if the update fails part-way through.
+
 ## 0.1.3
 
 - Bind the SHA-256 checksum manifest to the reported release version so automatic updates refuse mixed-version manifests.
