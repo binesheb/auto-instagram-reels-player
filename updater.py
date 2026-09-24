@@ -153,6 +153,7 @@ def update_script_if_needed():
     print(f"Updating from {local} → {remote}")
     backup_dir = backup_current_files(local)
     backup_current_version(local)
+    temporary_files = []
 
     try:
         LOCAL_ROOT.mkdir(parents=True, exist_ok=True)
@@ -170,13 +171,17 @@ def update_script_if_needed():
         for fname, content in downloaded.items():
             target = LOCAL_ROOT / fname
             temporary = target.with_suffix(target.suffix + ".tmp")
+            temporary_files.append(temporary)
             temporary.write_text(content)
             os.replace(temporary, target)
+            temporary_files.remove(temporary)
 
         LOCAL_VERSION_FILE.parent.mkdir(parents=True, exist_ok=True)
         temporary_version = LOCAL_VERSION_FILE.with_suffix(LOCAL_VERSION_FILE.suffix + ".tmp")
+        temporary_files.append(temporary_version)
         temporary_version.write_text(remote)
         os.replace(temporary_version, LOCAL_VERSION_FILE)
+        temporary_files.remove(temporary_version)
 
         show_changelog(remote_version=remote)
 
@@ -184,5 +189,10 @@ def update_script_if_needed():
         os.execv(sys.executable, [sys.executable, str(LOCAL_ROOT / "auto_reels_launcher.py")])
 
     except Exception as e:
+        for temporary in temporary_files:
+            try:
+                temporary.unlink()
+            except FileNotFoundError:
+                pass
         print(f"Update failed: {e}. Restoring backup.")
         restore_backup(backup_dir)
