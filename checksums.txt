@@ -1,5 +1,5 @@
-# version: 0.1.4
+# version: 0.1.5
 # sha256sum auto_reels_launcher.py updater.py > checksums.txt
 # Commit this file with the corresponding version.txt change.
-61538c2c7a06e1fbaf5e3a3fa05daa92060e0cfd42cce56c0dee7bfaa5eedb9b  auto_reels_launcher.py
-d2a166a6ee2a88e4ebb36c8700895caea9bee57137a6c26ae33e3461cbcbf279  updater.py
+2b705201f3e29b74b3edab0ee2067b413ee7e02a1eb0eb720e505c2a15500d2f  auto_reels_launcher.py
+9a1828e0edaccf5e344407d7cce7f5c7389e7ab10f4e022a07e0f141fb823a43  updater.py
