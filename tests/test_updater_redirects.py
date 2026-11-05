@@ -1,5 +1,9 @@
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import Mock, call, patch
+
+import requests
 
 from updater import (
     GITHUB_RAW,
@@ -124,6 +128,50 @@ class UpdaterRedirectTests(unittest.TestCase):
         get.assert_called_once_with(initial, timeout=10, allow_redirects=False)
         response.close.assert_called_once()
 
+
+
+    def test_rejects_http_error_responses(self):
+        initial = f"{GITHUB_RAW}/version.txt"
+        response = self._response(503, initial)
+        response.raise_for_status.side_effect = requests.HTTPError("503 Server Error")
+        with patch("updater.requests.get", return_value=response) as get:
+            with self.assertRaisesRegex(requests.HTTPError, "503 Server Error"):
+                _http_get("version.txt")
+        get.assert_called_once_with(initial, timeout=10, allow_redirects=False)
+        response.close.assert_called_once()
+
+    def test_rejects_placeholder_and_zero_digests_before_installing_files(self):
+        invalid_digests = ("0" * 64, "not-a-sha256", "TBD")
+        for invalid_digest in invalid_digests:
+            with self.subTest(invalid_digest=invalid_digest):
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    root = Path(temp_dir)
+                    local_root = root / "install"
+                    version_file = root / "version.txt"
+                    backup_dir = root / "backup"
+                    with patch("updater.TRACKED_FILES", ["auto_reels_launcher.py"]), \
+                        patch("updater.LOCAL_ROOT", local_root), \
+                        patch("updater.LOCAL_VERSION_FILE", version_file), \
+                        patch("updater.get_local_version", return_value="0.1.4"), \
+                        patch("updater.get_remote_version", return_value="0.1.5"), \
+                        patch(
+                            "updater.get_remote_checksums",
+                            return_value=("0.1.5", {"auto_reels_launcher.py": invalid_digest}),
+                        ), \
+                        patch("updater.backup_current_files", return_value=backup_dir) as backup, \
+                        patch("updater.backup_current_version") as backup_version, \
+                        patch("updater._http_get", return_value="new content") as http_get, \
+                        patch("updater.restore_backup") as restore, \
+                        patch("updater.os.replace") as replace:
+                        update_script_if_needed()
+
+                    backup.assert_called_once_with("0.1.4")
+                    backup_version.assert_called_once_with("0.1.4")
+                    http_get.assert_called_once_with("auto_reels_launcher.py")
+                    restore.assert_called_once_with(backup_dir)
+                    replace.assert_not_called()
+                    self.assertFalse((local_root / "auto_reels_launcher.py").exists())
+                    self.assertFalse(version_file.exists())
 
 if __name__ == "__main__":
     unittest.main()
