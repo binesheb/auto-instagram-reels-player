@@ -112,5 +112,18 @@ class UpdaterRedirectTests(unittest.TestCase):
             response.close.assert_called_once()
 
 
+    def test_rejects_untrusted_final_response_url(self):
+        initial = f"{GITHUB_RAW}/version.txt"
+        response = self._response(200, "https://evil.example/payload", "0.1.5\\n")
+        with patch("updater.requests.get", return_value=response) as get:
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "response URL is outside the trusted GitHub raw repository",
+            ):
+                _http_get("version.txt")
+        get.assert_called_once_with(initial, timeout=10, allow_redirects=False)
+        response.close.assert_called_once()
+
+
 if __name__ == "__main__":
     unittest.main()
