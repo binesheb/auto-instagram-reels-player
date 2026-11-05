@@ -11,6 +11,7 @@ from updater import (
     MAX_REDIRECTS,
     _http_get,
     _is_allowed_raw_url,
+    update_script_if_needed,
 )
 
 
