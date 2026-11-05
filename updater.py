@@ -2,9 +2,14 @@ import hashlib
 import os
 import sys
 from pathlib import Path
+from urllib.parse import unquote, urljoin, urlsplit
 import requests
 
 GITHUB_RAW = "https://raw.githubusercontent.com/binesheb/auto-instagram-reels-player/main"
+GITHUB_RAW_HOST = "raw.githubusercontent.com"
+GITHUB_RAW_PATH_PREFIX = "/binesheb/auto-instagram-reels-player/main/"
+MAX_REDIRECTS = 5
+REDIRECT_STATUSES = {301, 302, 303, 307, 308}
 
 LOCAL_ROOT = Path.home() / "auto-instagram-reels-player"
 LOCAL_VERSION_FILE = Path.home() / "insta_reels" / "version.txt"
@@ -15,11 +20,64 @@ TRACKED_FILES = [
     "updater.py",
 ]
 
+def _is_allowed_raw_url(url):
+    try:
+        parsed = urlsplit(url)
+        decoded_path = unquote(parsed.path)
+        return (
+            parsed.scheme.lower() == "https"
+            and parsed.hostname is not None
+            and parsed.hostname.lower() == GITHUB_RAW_HOST
+            and parsed.username is None
+            and parsed.password is None
+            and parsed.port in (None, 443)
+            and decoded_path.startswith(GITHUB_RAW_PATH_PREFIX)
+            and not any(part in {".", ".."} for part in decoded_path.split("/"))
+            and "%" not in parsed.path
+            and "\\" not in decoded_path
+            and not parsed.query
+            and not parsed.fragment
+        )
+    except ValueError:
+        return False
+
+
 def _http_get(path, timeout=10):
     url = f"{GITHUB_RAW}/{path}"
-    r = requests.get(url, timeout=timeout)
-    r.raise_for_status()
-    return r.text
+    if not _is_allowed_raw_url(url):
+        raise RuntimeError("Refusing updater URL outside the trusted GitHub raw repository")
+
+    for redirect_count in range(MAX_REDIRECTS + 1):
+        response = requests.get(url, timeout=timeout, allow_redirects=False)
+        if not _is_allowed_raw_url(response.url):
+            response.close()
+            raise RuntimeError("Updater response URL is outside the trusted GitHub raw repository")
+
+        if response.status_code in REDIRECT_STATUSES:
+            location = response.headers.get("Location")
+            response.close()
+            if redirect_count >= MAX_REDIRECTS:
+                raise RuntimeError("Updater exceeded the redirect limit")
+            if not location:
+                raise RuntimeError("Updater redirect is missing Location")
+            next_url = urljoin(url, location)
+            if not _is_allowed_raw_url(next_url):
+                raise RuntimeError("Updater redirect target is not trusted")
+            url = next_url
+            continue
+
+        if not 200 <= response.status_code < 300:
+            try:
+                response.raise_for_status()
+            finally:
+                response.close()
+            raise RuntimeError(f"Unexpected updater HTTP status: {response.status_code}")
+
+        content = response.text
+        response.close()
+        return content
+
+    raise RuntimeError("Updater exceeded the redirect limit")
 
 def get_local_version():
     if LOCAL_VERSION_FILE.exists():
